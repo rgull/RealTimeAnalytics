@@ -247,18 +247,28 @@ const Dashboard: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               Live Sensor Data
             </Typography>
-            <Box sx={{ height: 400 }}>
+            <Box sx={{ height: 400, position: 'relative' }}>
               {chartData.size > 0 ? (
                 <LineChart
                   series={Array.from(chartData.entries()).map(([sensorId, data]) => {
                     const sensor = sensors.find(s => s.id === sensorId);
                     return {
                       data: data.data.slice(-50), // Show last 50 points
-                      label: sensor?.name || `Sensor ${sensorId}`,
+                      label: sensor?.name,
                       color: `hsl(${(sensorId * 137.5) % 360}, 70%, 50%)`,
                     };
                   })}
                   height={350}
+                  margin={{ top: 60, right: 20, bottom: 40, left: 40 }}
+                  legend={{
+                    direction: 'row',
+                    position: { vertical: 'top', horizontal: 'right' },
+                    padding: 0,
+                    itemMarkWidth: 12,
+                    itemMarkHeight: 12,
+                    markGap: 8,
+                    itemGap: 16,
+                  }}
                 />
               ) : (
                 <Box display="flex" justifyContent="center" alignItems="center" height="100%">

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useSignalR } from '../services/SignalRService';
-import { SensorReading } from '../services/api';
 
 interface RealTimeGraphProps {
   sensorId?: number;
@@ -34,16 +33,6 @@ export const RealTimeGraph: React.FC<RealTimeGraphProps> = ({
     }
   }, [filteredReadings, maxDataPoints]);
 
-  const handleStartSimulation = async () => {
-    await startSimulation();
-    setIsSimulationRunning(true);
-  };
-
-  const handleStopSimulation = async () => {
-    await stopSimulation();
-    setIsSimulationRunning(false);
-  };
-
   const getLatestValue = () => {
     if (graphData.length === 0) return 'No data';
     const latest = graphData[graphData.length - 1];
@@ -51,58 +40,48 @@ export const RealTimeGraph: React.FC<RealTimeGraphProps> = ({
   };
 
   return (
-    <div className="real-time-graph">
-      <div className="graph-header">
-        <h3>Real-Time Sensor Data</h3>
-        <div className="controls">
-          <div className="status">
-            <span className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
+    <div className="border border-gray-300 rounded-lg p-5 my-5 bg-white shadow-md">
+      <div className="flex justify-between items-center mb-5 flex-wrap gap-2.5">
+        <h3 className="text-xl font-semibold">Real-Time Sensor Data</h3>
+        <div className="flex items-center gap-5 flex-wrap">
+          <div className="flex items-center gap-2.5">
+            <span className={`px-2 py-1 rounded text-xs font-bold ${
+              isConnected 
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-red-100 text-red-800'
+            }`}>
               {isConnected ? 'Connected' : 'Disconnected'}
             </span>
-            <span className="data-count">
+            <span className="text-sm text-gray-600">
               {graphData.length} data points
             </span>
           </div>
-          <div className="simulation-controls">
-            <button 
-              onClick={handleStartSimulation}
-              disabled={!isConnected || isSimulationRunning}
-              className="btn btn-start"
-            >
-              Start Simulation
-            </button>
-            <button 
-              onClick={handleStopSimulation}
-              disabled={!isConnected || !isSimulationRunning}
-              className="btn btn-stop"
-            >
-              Stop Simulation
-            </button>
+          <div className="flex gap-2.5">
           </div>
         </div>
       </div>
       
-      <div className="graph-content">
-        <div className="latest-value">
+      <div className="mt-5">
+        <div className="text-base mb-4 p-2.5 bg-gray-50 rounded">
           <strong>Latest Value:</strong> {getLatestValue()}
         </div>
         
-        <div className="graph-container">
+        <div className="min-h-[200px] border border-gray-200 rounded p-4">
           {graphData.length === 0 ? (
-            <div className="no-data">
+            <div className="flex items-center justify-center h-[150px] text-gray-600 italic">
               {isConnected ? 'Waiting for data...' : 'Not connected'}
             </div>
           ) : (
-            <div className="data-points">
+            <div className="flex flex-col gap-2">
               {graphData.slice(-10).map((point, index) => (
-                <div key={index} className="data-point">
-                  <span className="time">
+                <div key={index} className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded border-l-4 border-blue-500">
+                  <span className="text-xs text-gray-600 min-w-[80px]">
                     {point.x.toLocaleTimeString()}
                   </span>
-                  <span className="value">
+                  <span className="font-bold text-base text-blue-600 min-w-[60px] text-center">
                     {point.y.toFixed(2)}
                   </span>
-                  <span className="sensor">
+                  <span className="text-xs text-gray-600 min-w-[100px] text-right">
                     {point.sensorName}
                   </span>
                 </div>
@@ -111,163 +90,6 @@ export const RealTimeGraph: React.FC<RealTimeGraphProps> = ({
           )}
         </div>
       </div>
-      
-      <style jsx>{`
-        .real-time-graph {
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          padding: 20px;
-          margin: 20px 0;
-          background: white;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .graph-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
-          flex-wrap: wrap;
-          gap: 10px;
-        }
-        
-        .controls {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          flex-wrap: wrap;
-        }
-        
-        .status {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        
-        .status-indicator {
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-size: 12px;
-          font-weight: bold;
-        }
-        
-        .status-indicator.connected {
-          background: #d4edda;
-          color: #155724;
-        }
-        
-        .status-indicator.disconnected {
-          background: #f8d7da;
-          color: #721c24;
-        }
-        
-        .data-count {
-          font-size: 14px;
-          color: #666;
-        }
-        
-        .simulation-controls {
-          display: flex;
-          gap: 10px;
-        }
-        
-        .btn {
-          padding: 8px 16px;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-          transition: background-color 0.2s;
-        }
-        
-        .btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-        
-        .btn-start {
-          background: #28a745;
-          color: white;
-        }
-        
-        .btn-start:hover:not(:disabled) {
-          background: #218838;
-        }
-        
-        .btn-stop {
-          background: #dc3545;
-          color: white;
-        }
-        
-        .btn-stop:hover:not(:disabled) {
-          background: #c82333;
-        }
-        
-        .graph-content {
-          margin-top: 20px;
-        }
-        
-        .latest-value {
-          font-size: 16px;
-          margin-bottom: 15px;
-          padding: 10px;
-          background: #f8f9fa;
-          border-radius: 4px;
-        }
-        
-        .graph-container {
-          min-height: 200px;
-          border: 1px solid #e9ecef;
-          border-radius: 4px;
-          padding: 15px;
-        }
-        
-        .no-data {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 150px;
-          color: #666;
-          font-style: italic;
-        }
-        
-        .data-points {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        
-        .data-point {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 8px 12px;
-          background: #f8f9fa;
-          border-radius: 4px;
-          border-left: 4px solid #007bff;
-        }
-        
-        .time {
-          font-size: 12px;
-          color: #666;
-          min-width: 80px;
-        }
-        
-        .value {
-          font-weight: bold;
-          font-size: 16px;
-          color: #007bff;
-          min-width: 60px;
-          text-align: center;
-        }
-        
-        .sensor {
-          font-size: 12px;
-          color: #666;
-          min-width: 100px;
-          text-align: right;
-        }
-      `}</style>
     </div>
   );
 };
