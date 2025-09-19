@@ -22,6 +22,7 @@ import SensorCard from './SensorCard';
 import StatisticsPanel from './StatisticsPanel';
 import AlertsPanel from './AlertsPanel';
 import ConnectionStatus from './ConnectionStatus';
+import { RealTimeGraph } from './RealTimeGraph';
 
 const Dashboard: React.FC = () => {
   const { isConnected, newReadings, newAlerts, clearNewReadings, clearNewAlerts } = useSignalR();
@@ -232,6 +233,11 @@ const Dashboard: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Real-Time Graph Component */}
+      <Box sx={{ mb: 3 }}>
+        <RealTimeGraph maxDataPoints={100} />
+      </Box>
 
       {/* Main Content */}
       <Grid container spacing={3}>

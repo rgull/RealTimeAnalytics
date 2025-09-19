@@ -10,6 +10,8 @@ interface SignalRContextType {
   newAlerts: Alert[];
   subscribeToSensor: (sensorId: number) => Promise<void>;
   unsubscribeFromSensor: (sensorId: number) => Promise<void>;
+  startSimulation: () => Promise<void>;
+  stopSimulation: () => Promise<void>;
   clearNewReadings: () => void;
   clearNewAlerts: () => void;
 }
@@ -48,14 +50,28 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
 
         // Set up event handlers
         hubConnection.on('NewReadings', (readings: SensorReading[]) => {
-          console.log('Received new readings:', readings);
-          setNewReadings(prev => [...prev, ...readings].slice(-100)); // Keep last 100 readings
+          console.log('Received new readings batch:', readings);
+          setNewReadings(prev => [...prev, ...readings].slice(-200)); // Keep last 200 readings for continuous flow
+        });
+
+        hubConnection.on('NewReading', (reading: SensorReading) => {
+          console.log('Received single reading:', reading);
+          setNewReadings(prev => [...prev, reading].slice(-200)); // Keep last 200 readings
         });
 
         hubConnection.on('NewAlert', (alert: Alert) => {
           console.log('Received new alert:', alert);
           setNewAlerts(prev => [alert, ...prev].slice(0, 50)); // Keep last 50 alerts
         });
+
+        hubConnection.on('SimulationStarted', (message: string) => {
+          console.log('Simulation started:', message);
+        });
+
+        hubConnection.on('SimulationStopped', (message: string) => {
+          console.log('Simulation stopped:', message);
+        });
+
 
         hubConnection.onclose((error) => {
           console.log('SignalR connection closed:', error);
@@ -81,6 +97,14 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
         setConnection(hubConnection);
         setIsConnected(true);
         setConnectionId(hubConnection.connectionId);
+
+        // Auto-start the sensor simulation
+        try {
+          await hubConnection.invoke('StartSimulation');
+          console.log('Auto-started sensor simulation');
+        } catch (error) {
+          console.warn('Could not auto-start simulation:', error);
+        }
 
       } catch (error) {
         console.error('Error starting SignalR connection:', error);
@@ -128,6 +152,28 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
     setNewAlerts([]);
   };
 
+  const startSimulation = async () => {
+    if (connection && isConnected) {
+      try {
+        await connection.invoke('StartSimulation');
+        console.log('Started sensor simulation');
+      } catch (error) {
+        console.error('Error starting simulation:', error);
+      }
+    }
+  };
+
+  const stopSimulation = async () => {
+    if (connection && isConnected) {
+      try {
+        await connection.invoke('StopSimulation');
+        console.log('Stopped sensor simulation');
+      } catch (error) {
+        console.error('Error stopping simulation:', error);
+      }
+    }
+  };
+
   const value: SignalRContextType = {
     connection,
     isConnected,
@@ -136,6 +182,8 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
     newAlerts,
     subscribeToSensor,
     unsubscribeFromSensor,
+    startSimulation,
+    stopSimulation,
     clearNewReadings,
     clearNewAlerts,
   };
