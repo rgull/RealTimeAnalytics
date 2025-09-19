@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace RealTimeSensorTrack.Models
 {
@@ -25,8 +26,9 @@ namespace RealTimeSensorTrack.Models
         public bool IsResolved { get; set; } = false;
         
         public DateTime? ResolvedAt { get; set; }
-        
+
         // Navigation property
+        [JsonIgnore]
         public virtual Sensor Sensor { get; set; } = null!;
     }
 }

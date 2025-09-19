@@ -27,7 +27,7 @@ namespace RealTimeSensorTrack.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Sensor>>> GetSensors()
         {
-            return await _context.Sensors.Include(x=>x.SensorReadings).Include(x => x.SensorStatistics)
+            return await _context.Sensors//.Include(x=>x.SensorReadings).Include(x => x.SensorStatistics)
                 .Where(s => s.IsActive)
                 .OrderBy(s => s.Name)
                 .ToListAsync();
