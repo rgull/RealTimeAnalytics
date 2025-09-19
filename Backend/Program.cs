@@ -28,6 +28,7 @@ namespace RealTimeSensorTrack
             builder.Services.AddScoped<IInMemoryDataService, InMemoryDataService>();
             builder.Services.AddScoped<IAnomalyDetectionService, AnomalyDetectionService>();
             builder.Services.AddScoped<IDataPurgeService, DataPurgeService>();
+            builder.Services.AddScoped<IAlertService, AlertService>();
 
             // Add background services
             builder.Services.AddHostedService<SensorSimulationService>();
@@ -80,6 +81,53 @@ namespace RealTimeSensorTrack
             using (var scope = app.Services.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                
+                // Add alert columns to Sensors table if they don't exist
+                try
+                {
+                    await context.Database.ExecuteSqlRawAsync(@"
+                        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Sensors') AND name = 'WarningThreshold')
+                            ALTER TABLE Sensors ADD WarningThreshold FLOAT NULL;
+                        
+                        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Sensors') AND name = 'CriticalThreshold')
+                            ALTER TABLE Sensors ADD CriticalThreshold FLOAT NULL;
+                        
+                        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Sensors') AND name = 'MinThreshold')
+                            ALTER TABLE Sensors ADD MinThreshold FLOAT NULL;
+                        
+                        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Sensors') AND name = 'AlertEnabled')
+                            ALTER TABLE Sensors ADD AlertEnabled BIT NOT NULL DEFAULT 1;
+                    ");
+
+                    // Create Alerts table if it doesn't exist
+                    await context.Database.ExecuteSqlRawAsync(@"
+                        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Alerts' AND xtype='U')
+                        BEGIN
+                            CREATE TABLE Alerts (
+                                Id BIGINT IDENTITY(1,1) PRIMARY KEY,
+                                SensorId INT NOT NULL,
+                                Message NVARCHAR(200) NOT NULL,
+                                Severity NVARCHAR(50) NOT NULL,
+                                ThresholdValue FLOAT NULL,
+                                ActualValue FLOAT NULL,
+                                CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                                IsResolved BIT NOT NULL DEFAULT 0,
+                                ResolvedAt DATETIME2 NULL,
+                                FOREIGN KEY (SensorId) REFERENCES Sensors(Id)
+                            );
+
+                            CREATE INDEX IX_Alerts_SensorId ON Alerts(SensorId);
+                            CREATE INDEX IX_Alerts_CreatedAt ON Alerts(CreatedAt);
+                            CREATE INDEX IX_Alerts_Severity ON Alerts(Severity);
+                            CREATE INDEX IX_Alerts_IsResolved ON Alerts(IsResolved);
+                        END
+                    ");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Could not add alert columns: {ex.Message}");
+                }
+                
                 var seeder = new DatabaseSeeder(context);
                 await seeder.SeedAsync();
             }

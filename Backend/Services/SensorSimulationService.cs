@@ -20,6 +20,7 @@ namespace RealTimeSensorTrack.Services
         private readonly Random _random = new();
         private readonly string[] _sensorTypes = { "Temperature", "Humidity", "Pressure", "Light", "Motion", "Sound" };
         private readonly string[] _units = { "°C", "%", "hPa", "lux", "count", "dB" };
+        private readonly Dictionary<int, DateTime> _lastAlertTime = new(); // Track last alert time per sensor
         
         private int _simulationRate;
         private int _batchSize;
@@ -95,6 +96,7 @@ namespace RealTimeSensorTrack.Services
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var inMemoryService = scope.ServiceProvider.GetRequiredService<IInMemoryDataService>();
             var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<SensorHub>>();
+            var alertService = scope.ServiceProvider.GetRequiredService<IAlertService>();
 
             var readings = new List<SensorReading>();
             var readingsToGenerate = Math.Min(_batchSize, _simulationRate);
@@ -107,6 +109,9 @@ namespace RealTimeSensorTrack.Services
                 
                 readings.Add(reading);
                 inMemoryService.AddReading(reading);
+
+                // Check for alerts after generating each reading
+                await alertService.CheckSensorReadingForAlertsAsync(reading);
 
                 // Small delay to spread readings across the interval
                 if (i < readingsToGenerate - 1)
@@ -184,19 +189,143 @@ namespace RealTimeSensorTrack.Services
             {
                 var sensors = new List<Sensor>
                 {
-                    new Sensor { Name = "Temperature Sensor 1", Type = "Temperature", Location = "Room A", Description = "Main temperature sensor", Unit = "°C" },
-                    new Sensor { Name = "Humidity Sensor 1", Type = "Humidity", Location = "Room A", Description = "Main humidity sensor", Unit = "%" },
-                    new Sensor { Name = "Pressure Sensor 1", Type = "Pressure", Location = "Room A", Description = "Atmospheric pressure sensor", Unit = "hPa" },
-                    new Sensor { Name = "Light Sensor 1", Type = "Light", Location = "Room A", Description = "Ambient light sensor", Unit = "lux" },
-                    new Sensor { Name = "Motion Sensor 1", Type = "Motion", Location = "Room A", Description = "Motion detection sensor", Unit = "count" },
-                    new Sensor { Name = "Sound Sensor 1", Type = "Sound", Location = "Room A", Description = "Sound level sensor", Unit = "dB" },
-                    new Sensor { Name = "Temperature Sensor 2", Type = "Temperature", Location = "Room B", Description = "Secondary temperature sensor", Unit = "°C" },
-                    new Sensor { Name = "Humidity Sensor 2", Type = "Humidity", Location = "Room B", Description = "Secondary humidity sensor", Unit = "%" }
+                    new Sensor { 
+                        Name = "Temperature Sensor 1", 
+                        Type = "Temperature", 
+                        Location = "Room A", 
+                        Description = "Main temperature sensor", 
+                        Unit = "°C",
+                        WarningThreshold = 20.0,
+                        CriticalThreshold = 25.0,
+                        MinThreshold = 5.0,
+                        AlertEnabled = true
+                    },
+                    new Sensor { 
+                        Name = "Humidity Sensor 1", 
+                        Type = "Humidity", 
+                        Location = "Room A", 
+                        Description = "Main humidity sensor", 
+                        Unit = "%",
+                        WarningThreshold = 50.0,
+                        CriticalThreshold = 60.0,
+                        MinThreshold = 10.0,
+                        AlertEnabled = true
+                    },
+                    new Sensor { 
+                        Name = "Pressure Sensor 1", 
+                        Type = "Pressure", 
+                        Location = "Room A", 
+                        Description = "Atmospheric pressure sensor", 
+                        Unit = "hPa",
+                        WarningThreshold = 950.0,
+                        CriticalThreshold = 960.0,
+                        MinThreshold = 900.0,
+                        AlertEnabled = true
+                    },
+                    new Sensor { 
+                        Name = "Light Sensor 1", 
+                        Type = "Light", 
+                        Location = "Room A", 
+                        Description = "Ambient light sensor", 
+                        Unit = "lux",
+                        WarningThreshold = 500.0,
+                        CriticalThreshold = 600.0,
+                        MinThreshold = 100.0,
+                        AlertEnabled = true
+                    },
+                    new Sensor { 
+                        Name = "Motion Sensor 1", 
+                        Type = "Motion", 
+                        Location = "Room A", 
+                        Description = "Motion detection sensor", 
+                        Unit = "count",
+                        WarningThreshold = 5.0,
+                        CriticalThreshold = 8.0,
+                        MinThreshold = 0.0,
+                        AlertEnabled = true
+                    },
+                    new Sensor { 
+                        Name = "Sound Sensor 1", 
+                        Type = "Sound", 
+                        Location = "Room A", 
+                        Description = "Sound level sensor", 
+                        Unit = "dB",
+                        WarningThreshold = 60.0,
+                        CriticalThreshold = 70.0,
+                        MinThreshold = 10.0,
+                        AlertEnabled = true
+                    },
+                    new Sensor { 
+                        Name = "Temperature Sensor 2", 
+                        Type = "Temperature", 
+                        Location = "Room B", 
+                        Description = "Secondary temperature sensor", 
+                        Unit = "°C",
+                        WarningThreshold = 20.0,
+                        CriticalThreshold = 25.0,
+                        MinThreshold = 5.0,
+                        AlertEnabled = true
+                    },
+                    new Sensor { 
+                        Name = "Humidity Sensor 2", 
+                        Type = "Humidity", 
+                        Location = "Room B", 
+                        Description = "Secondary humidity sensor", 
+                        Unit = "%",
+                        WarningThreshold = 50.0,
+                        CriticalThreshold = 60.0,
+                        MinThreshold = 10.0,
+                        AlertEnabled = true
+                    }
                 };
 
                 context.Sensors.AddRange(sensors);
                 await context.SaveChangesAsync();
             }
+
+            // Update existing sensors with new thresholds
+            var existingSensors = context.Sensors.ToList();
+            foreach (var sensor in existingSensors)
+            {
+                // Update thresholds based on sensor type
+                switch (sensor.Type)
+                {
+                    case "Temperature":
+                        sensor.WarningThreshold = 20.0;
+                        sensor.CriticalThreshold = 25.0;
+                        sensor.MinThreshold = 5.0;
+                        break;
+                    case "Humidity":
+                        sensor.WarningThreshold = 50.0;
+                        sensor.CriticalThreshold = 60.0;
+                        sensor.MinThreshold = 10.0;
+                        break;
+                    case "Pressure":
+                        sensor.WarningThreshold = 950.0;
+                        sensor.CriticalThreshold = 960.0;
+                        sensor.MinThreshold = 900.0;
+                        break;
+                    case "Light":
+                        sensor.WarningThreshold = 500.0;
+                        sensor.CriticalThreshold = 600.0;
+                        sensor.MinThreshold = 100.0;
+                        break;
+                    case "Motion":
+                        sensor.WarningThreshold = 5.0;
+                        sensor.CriticalThreshold = 8.0;
+                        sensor.MinThreshold = 0.0;
+                        break;
+                    case "Sound":
+                        sensor.WarningThreshold = 60.0;
+                        sensor.CriticalThreshold = 70.0;
+                        sensor.MinThreshold = 10.0;
+                        break;
+                }
+                sensor.AlertEnabled = true;
+            }
+            
+            await context.SaveChangesAsync();
+            _logger.LogInformation("Updated sensor thresholds for alert generation");
 
             _sensors = context.Sensors.Where(s => s.IsActive).ToList();
             _logger.LogInformation($"Initialized {_sensors.Count} sensors for simulation");
@@ -218,16 +347,52 @@ namespace RealTimeSensorTrack.Services
 
         private SensorReading GenerateSensorReading(Sensor sensor)
         {
-            var value = sensor.Type switch
+            double value;
+            bool shouldTriggerAlert = _random.NextDouble() < 0.001; // 0.1% chance to trigger alert (every 1-2 minutes)
+            
+            // Check cooldown period (minimum 60 seconds between alerts for same sensor)
+            bool canTriggerAlert = true;
+            if (_lastAlertTime.ContainsKey(sensor.Id))
             {
-                "Temperature" => _random.NextDouble() * 40 + 10, // 10-50°C
-                "Humidity" => _random.NextDouble() * 100, // 0-100%
-                "Pressure" => _random.NextDouble() * 200 + 900, // 900-1100 hPa
-                "Light" => _random.NextDouble() * 1000, // 0-1000 lux
-                "Motion" => _random.NextDouble() * 10, // 0-10 count
-                "Sound" => _random.NextDouble() * 100, // 0-100 dB
-                _ => _random.NextDouble() * 100
-            };
+                var timeSinceLastAlert = DateTime.UtcNow - _lastAlertTime[sensor.Id];
+                canTriggerAlert = timeSinceLastAlert.TotalSeconds >= 60; // 60 second cooldown (1 minute)
+                
+            }
+
+            if (shouldTriggerAlert && sensor.AlertEnabled && canTriggerAlert)
+            {
+                // Update last alert time
+                _lastAlertTime[sensor.Id] = DateTime.UtcNow;
+                
+                // Generate values that will trigger alerts based on sensor type
+                value = sensor.Type switch
+                {
+                    "Temperature" => _random.NextDouble() * 15 + 30, // 30-45°C (high temperature)
+                    "Humidity" => _random.NextDouble() * 30 + 70, // 70-100% (high humidity)
+                    "Pressure" => _random.NextDouble() * 30 + 970, // 970-1000 hPa (high pressure)
+                    "Light" => _random.NextDouble() * 300 + 700, // 700-1000 lux (high light)
+                    "Motion" => _random.NextDouble() * 5 + 10, // 10-15 count (high motion)
+                    "Sound" => _random.NextDouble() * 30 + 80, // 80-110 dB (high sound)
+                    _ => _random.NextDouble() * 30 + 60
+                };
+                
+                _logger.LogInformation("🚨 Generating alert-triggering value for {SensorName}: {Value} (Type: {Type})", 
+                    sensor.Name, value, sensor.Type);
+            }
+            else
+            {
+                // Generate normal values (original logic)
+                value = sensor.Type switch
+                {
+                    "Temperature" => _random.NextDouble() * 40 + 10, // 10-50°C
+                    "Humidity" => _random.NextDouble() * 100, // 0-100%
+                    "Pressure" => _random.NextDouble() * 200 + 900, // 900-1100 hPa
+                    "Light" => _random.NextDouble() * 1000, // 0-1000 lux
+                    "Motion" => _random.NextDouble() * 10, // 0-10 count
+                    "Sound" => _random.NextDouble() * 100, // 0-100 dB
+                    _ => _random.NextDouble() * 100
+                };
+            }
 
             return new SensorReading
             {
@@ -235,7 +400,7 @@ namespace RealTimeSensorTrack.Services
                 Value = Math.Round(value, 2),
                 Unit = sensor.Unit ?? GetUnitForType(sensor.Type),
                 Timestamp = DateTime.UtcNow,
-                Metadata = $"{{\"simulated\": true, \"quality\": {_random.NextDouble():F2}}}"
+                Metadata = $"{{\"simulated\": true, \"quality\": {_random.NextDouble():F2}, \"alert_triggered\": {shouldTriggerAlert.ToString().ToLower()}}}"
             };
         }
 

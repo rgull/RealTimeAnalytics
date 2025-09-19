@@ -29,6 +29,12 @@ namespace RealTimeSensorTrack.Models
         
         public DateTime? LastReadingAt { get; set; }
         
+        // Alert threshold configuration
+        public double? WarningThreshold { get; set; }
+        public double? CriticalThreshold { get; set; }
+        public double? MinThreshold { get; set; }
+        public bool AlertEnabled { get; set; } = true;
+        
         // Navigation properties
         public virtual ICollection<SensorReading> SensorReadings { get; set; } = new List<SensorReading>();
         public virtual ICollection<Alert> Alerts { get; set; } = new List<Alert>();

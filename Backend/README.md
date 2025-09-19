@@ -1,184 +1,228 @@
-# Real-Time Sensor Data Tracking System
+# Real-Time Sensor Analytics - Backend
 
-A comprehensive full-stack system that simulates and displays real-time sensor data with advanced features including anomaly detection, auto-purge mechanisms, and a modern web dashboard.
+## Overview
 
-## 🚀 Features
+A robust ASP.NET Core backend system for real-time sensor data collection, processing, and alert management. This system provides comprehensive APIs for sensor management, real-time data streaming via SignalR, and intelligent alert generation based on configurable thresholds.
 
-### Backend (.NET Core API)
-- **High-Performance Data Simulation**: Generates 1000 sensor readings per second
-- **Efficient In-Memory Storage**: Handles up to 100,000 data points without performance degradation
-- **Auto-Purge Mechanism**: Automatically deletes data older than 24 hours
-- **Real-Time Communication**: WebSocket/SignalR for scalable real-time updates
-- **Anomaly Detection**: Advanced statistical analysis to detect unusual sensor readings
-- **Background Services**: Automated data processing and cleanup
+## Features
 
-### Database (SQL Server)
-- **SensorReadings**: Stores raw sensor data with optimized indexing
-- **Sensors**: Metadata about each sensor device
-- **Alerts**: Logs anomaly events for monitoring and review
-- **SensorStatistics**: Pre-calculated statistics for performance optimization
+### Core Functionality
 
-### Frontend Dashboard
-- **Real-Time Visualization**: Live charts showing sensor data
-- **Interactive Interface**: Modern, responsive design
-- **Alert Management**: Real-time alert notifications
-- **Performance Metrics**: Live statistics and monitoring
+- **Real-time Sensor Data Collection**: Continuous simulation and processing of sensor readings
+- **SignalR Integration**: Real-time data streaming to connected clients
+- **Intelligent Alert System**: Automated alert generation based on sensor thresholds
+- **Database Management**: Entity Framework Core with SQL Server integration
+- **Background Services**: Continuous sensor simulation and data processing
 
-## 🛠️ Technical Stack
+### Sensor Management
 
-- **Backend**: .NET 8, ASP.NET Core Web API
+- **Multi-sensor Support**: Temperature, Humidity, Pressure, Light, Motion, and Sound sensors
+- **Configurable Thresholds**: Warning, Critical, and Minimum threshold settings per sensor
+- **Alert Configuration**: Enable/disable alerts per sensor
+- **Real-time Statistics**: Live sensor performance metrics
+
+### Alert System
+
+- **Threshold-based Alerts**: Automatic alerts when sensor values exceed configured limits
+- **Severity Levels**: Info, Warning, Error, and Critical alert classifications
+- **Alert Management**: Create, resolve, and track alert status
+- **Real-time Notifications**: Instant alert delivery via SignalR
+- **Alert History**: Comprehensive alert logging and retrieval
+
+### API Endpoints
+
+- **Sensor Management**: CRUD operations for sensor configuration
+- **Data Retrieval**: Historical sensor readings and statistics
+- **Alert Management**: Alert creation, resolution, and history
+- **Real-time Status**: System health and connection monitoring
+
+## Technology Stack
+
+- **Framework**: ASP.NET Core 8.0
 - **Database**: SQL Server with Entity Framework Core
-- **Real-Time**: SignalR for WebSocket communication
-- **Frontend**: HTML5, CSS3, JavaScript, Chart.js
-- **Background Services**: .NET Hosted Services
-- **Data Processing**: In-memory caching with concurrent collections
+- **Real-time Communication**: SignalR
+- **Background Processing**: Hosted Services
+- **Logging**: Built-in ASP.NET Core logging
+- **Configuration**: JSON-based configuration management
 
-## 📋 Prerequisites
+## Architecture
 
-- .NET 8 SDK
-- SQL Server (LocalDB or full instance)
-- Visual Studio 2022 or VS Code
-- Modern web browser
+### Service Layer
 
-## 🚀 Getting Started
+- **SensorSimulationService**: Background service for continuous sensor data generation
+- **AlertService**: Intelligent alert processing and notification management
+- **InMemoryDataService**: High-performance in-memory data caching
+- **DatabaseSeeder**: Automated database initialization and sample data
 
-### 1. Clone and Setup
-```bash
-git clone <repository-url>
-cd RealTimeSensorTrack
-```
+### Data Models
 
-### 2. Update Connection String
-Update the connection string in `appsettings.json`:
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=RealTimeSensorTrackDb;Trusted_Connection=true;MultipleActiveResultSets=true"
-  }
-}
-```
+- **Sensor**: Core sensor configuration with threshold settings
+- **SensorReading**: Individual sensor data points with metadata
+- **Alert**: Alert records with severity and resolution tracking
+- **SensorStatistic**: Aggregated sensor performance metrics
 
-### 3. Install Dependencies
-```bash
-dotnet restore
-```
+### Real-time Features
 
-### 4. Run the Application
-```bash
-dotnet run
-```
+- **SignalR Hub**: Centralized real-time communication hub
+- **Client Grouping**: Sensor-specific subscription management
+- **Automatic Reconnection**: Robust connection handling
+- **Data Broadcasting**: Efficient multi-client data distribution
 
-### 5. Access the Dashboard
-Open your browser and navigate to:
-- **Dashboard**: `https://localhost:7000` or `http://localhost:5000`
-- **API Documentation**: `https://localhost:7000/swagger`
+## Configuration
 
-## 📊 API Endpoints
+### Database Connection
 
-### Sensors
-- `GET /api/sensors` - Get all active sensors
-- `GET /api/sensors/{id}` - Get specific sensor
-- `POST /api/sensors` - Create new sensor
-- `PUT /api/sensors/{id}` - Update sensor
-- `DELETE /api/sensors/{id}` - Deactivate sensor
-- `GET /api/sensors/{id}/readings` - Get recent readings for sensor
-- `GET /api/sensors/{id}/statistics` - Get sensor statistics
+Configure SQL Server connection string in `appsettings.json`:
 
-### Sensor Readings
-- `GET /api/sensorreadings` - Get recent readings
-- `GET /api/sensorreadings/by-sensor/{sensorId}` - Get readings by sensor
-- `GET /api/sensorreadings/by-time-range` - Get readings by time range
-- `GET /api/sensorreadings/count` - Get total reading count
-- `POST /api/sensorreadings` - Add new reading
+- Development and production database settings
+- Connection pooling and timeout configuration
+- Migration and seeding options
 
-### Alerts
-- `GET /api/alerts` - Get alerts with filtering
-- `GET /api/alerts/{id}` - Get specific alert
-- `PUT /api/alerts/{id}/resolve` - Resolve alert
-- `DELETE /api/alerts/{id}` - Delete alert
-- `GET /api/alerts/statistics` - Get alert statistics
+### Sensor Simulation
 
-## ⚙️ Configuration
+- **Simulation Rate**: Configurable readings per second
+- **Batch Processing**: Optimized data generation and storage
+- **Update Intervals**: Customizable data refresh rates
+- **Alert Probability**: Configurable alert trigger frequency
 
-### Sensor Settings
-```json
-{
-  "SensorSettings": {
-    "MaxInMemoryRecords": 100000,
-    "DataRetentionHours": 24,
-    "SimulationRatePerSecond": 1000,
-    "AnomalyThreshold": 2.0
-  }
-}
-```
+### SignalR Settings
 
-### Performance Tuning
-- **MaxInMemoryRecords**: Maximum number of readings to keep in memory
-- **DataRetentionHours**: Hours to retain data before auto-purge
-- **SimulationRatePerSecond**: Rate of simulated sensor readings
-- **AnomalyThreshold**: Z-score threshold for anomaly detection
+- **Transport Configuration**: WebSocket and fallback options
+- **Connection Management**: Automatic reconnection policies
+- **Client Grouping**: Sensor-specific subscription handling
+- **Message Broadcasting**: Efficient multi-client communication
 
-## 🔧 Architecture
+## Database Schema
 
-### Data Flow
-1. **Sensor Simulation Service** generates readings at 1000/second
-2. **In-Memory Data Service** stores recent readings efficiently
-3. **Anomaly Detection Service** analyzes readings for anomalies
-4. **SignalR Hub** broadcasts real-time updates to clients
-5. **Background Purge Service** cleans old data every hour
-6. **Database** persists readings and metadata
+### Core Tables
 
-### Key Components
-- **InMemoryDataService**: Thread-safe concurrent collections for high-performance data storage
-- **SensorSimulationService**: Background service generating realistic sensor data
-- **AnomalyDetectionService**: Statistical analysis using Z-score for anomaly detection
-- **DataPurgeService**: Automated cleanup of old data
-- **SensorHub**: SignalR hub for real-time communication
+- **Sensors**: Sensor configuration and threshold settings
+- **SensorReadings**: Historical sensor data points
+- **Alerts**: Alert records and resolution tracking
+- **SensorStatistics**: Aggregated performance metrics
 
-## 📈 Performance Features
+### Relationships
 
-- **Concurrent Data Structures**: Thread-safe collections for high-throughput data
-- **Batch Processing**: Efficient database operations
-- **Memory Management**: Automatic cleanup of old data
-- **Real-Time Updates**: WebSocket communication for instant updates
-- **Statistical Analysis**: Pre-calculated statistics for fast queries
+- One-to-many relationships between sensors and readings
+- One-to-many relationships between sensors and alerts
+- Foreign key constraints for data integrity
+- Indexed columns for optimal query performance
 
-## 🚨 Monitoring and Alerts
+## Performance Features
 
-The system includes comprehensive monitoring:
-- Real-time performance metrics
-- Anomaly detection with configurable thresholds
-- Alert severity levels (Info, Warning, Error, Critical)
-- Historical alert tracking
-- Sensor health monitoring
+### Data Processing
 
-## 🔒 Security Considerations
+- **Batch Operations**: Efficient bulk data processing
+- **In-memory Caching**: High-performance data access
+- **Background Processing**: Non-blocking data generation
+- **Optimized Queries**: Efficient database operations
 
-- CORS enabled for development
-- Input validation on all endpoints
-- SQL injection protection via Entity Framework
-- Secure SignalR connections
+### Real-time Communication
 
-## 🧪 Testing
+- **Connection Pooling**: Optimized SignalR connections
+- **Message Batching**: Efficient data broadcasting
+- **Client Management**: Automatic connection handling
+- **Error Recovery**: Robust error handling and reconnection
 
-The system includes:
-- Unit tests for core services
-- Integration tests for API endpoints
-- Performance tests for high-load scenarios
-- Real-time communication tests
+## Security Features
 
-## 📝 License
+### API Security
 
-This project is licensed under the MIT License.
+- **CORS Configuration**: Cross-origin request handling
+- **Input Validation**: Comprehensive data validation
+- **Error Handling**: Secure error message management
+- **Logging**: Comprehensive audit trail
 
-## 🤝 Contributing
+### Data Protection
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+- **SQL Injection Prevention**: Parameterized queries
+- **Data Validation**: Input sanitization and validation
+- **Error Logging**: Secure error handling
+- **Connection Security**: Encrypted database connections
 
-## 📞 Support
+## Monitoring and Logging
 
-For questions or issues, please create an issue in the repository or contact the development team.
+### System Monitoring
+
+- **Health Checks**: Application and database health monitoring
+- **Performance Metrics**: Real-time system performance tracking
+- **Connection Status**: SignalR connection monitoring
+- **Alert Statistics**: Comprehensive alert analytics
+
+### Logging
+
+- **Structured Logging**: JSON-formatted log entries
+- **Log Levels**: Configurable logging verbosity
+- **Performance Tracking**: Request and operation timing
+- **Error Tracking**: Comprehensive error logging and analysis
+
+## Deployment
+
+### Prerequisites
+
+- .NET 8.0 Runtime
+- SQL Server 2019 or later
+- Windows Server or Linux environment
+- IIS or Kestrel web server
+
+### Configuration
+
+- Database connection string configuration
+- SignalR transport settings
+- Logging configuration
+- Performance tuning parameters
+
+### Production Considerations
+
+- **Database Optimization**: Indexing and query optimization
+- **Connection Pooling**: Database connection management
+- **Caching Strategy**: In-memory and distributed caching
+- **Monitoring**: Application performance monitoring
+
+## Maintenance
+
+### Database Maintenance
+
+- **Data Purging**: Automated old data cleanup
+- **Index Optimization**: Regular index maintenance
+- **Backup Strategy**: Automated database backups
+- **Migration Management**: Schema update procedures
+
+### System Maintenance
+
+- **Log Rotation**: Automated log file management
+- **Performance Monitoring**: Continuous system monitoring
+- **Alert Management**: Alert cleanup and resolution
+- **Update Procedures**: Application update processes
+
+## Troubleshooting
+
+### Common Issues
+
+- **Database Connection**: Connection string and network issues
+- **SignalR Connectivity**: WebSocket and transport problems
+- **Performance Issues**: Database and memory optimization
+- **Alert Generation**: Threshold and configuration problems
+
+### Diagnostic Tools
+
+- **Log Analysis**: Comprehensive log file analysis
+- **Performance Counters**: System performance monitoring
+- **Database Profiling**: Query performance analysis
+- **Network Diagnostics**: Connection and communication testing
+
+## Support
+
+For technical support and documentation:
+
+- Review application logs for error details
+- Check database connectivity and configuration
+- Verify SignalR connection settings
+- Monitor system performance metrics
+
+## Version Information
+
+- **Framework**: ASP.NET Core 8.0
+- **Database**: Entity Framework Core 8.0
+- **SignalR**: ASP.NET Core SignalR
+- **Target Platform**: .NET 8.0

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Card,
   CardContent,
@@ -7,9 +7,9 @@ import {
   Chip,
   LinearProgress,
   Grid,
-} from '@mui/material';
-import { TrendingUp, TrendingDown, TrendingFlat } from '@mui/icons-material';
-import { Sensor, SensorReading, SensorStatistics } from '../services/api';
+} from "@mui/material";
+import { TrendingUp, TrendingDown, TrendingFlat } from "@mui/icons-material";
+import { Sensor, SensorReading, SensorStatistics } from "../services/api";
 
 interface SensorCardProps {
   sensor: Sensor;
@@ -17,39 +17,45 @@ interface SensorCardProps {
   statistics?: SensorStatistics;
 }
 
-const SensorCard: React.FC<SensorCardProps> = ({ sensor, readings, statistics }) => {
+const SensorCard: React.FC<SensorCardProps> = ({
+  sensor,
+  readings,
+  statistics,
+}) => {
   const getTrendIcon = (current: number, previous: number) => {
     if (current > previous) return <TrendingUp color="success" />;
     if (current < previous) return <TrendingDown color="error" />;
     return <TrendingFlat color="action" />;
   };
 
-  const getTrendDirection = (current: number, previous: number) => {
-    if (current > previous) return 'up';
-    if (current < previous) return 'down';
-    return 'flat';
-  };
-
-  const currentValue = readings.length > 0 ? readings[readings.length - 1]?.value : 0;
-  const previousValue = readings.length > 1 ? readings[readings.length - 2]?.value : currentValue;
-  const trend = getTrendDirection(currentValue, previousValue);
+  const currentValue =
+    readings.length > 0 ? readings[readings.length - 1]?.value : 0;
+  const previousValue =
+    readings.length > 1 ? readings[readings.length - 2]?.value : currentValue;
 
   const getSeverityColor = (value: number) => {
-    if (!statistics) return 'default';
-    
+    if (!statistics) return "default";
+
     const { min, max, average } = statistics;
     const range = max - min;
     const deviation = Math.abs(value - average);
-    
-    if (deviation > range * 0.3) return 'error';
-    if (deviation > range * 0.15) return 'warning';
-    return 'success';
+
+    if (deviation > range * 0.3) return "error";
+    if (deviation > range * 0.15) return "warning";
+    return "success";
   };
 
   return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <CardContent sx={{ flexGrow: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 2,
+          }}
+        >
           <Typography variant="h6" component="h3" noWrap>
             {sensor.name}
           </Typography>
@@ -62,25 +68,31 @@ const SensorCard: React.FC<SensorCardProps> = ({ sensor, readings, statistics })
         </Box>
 
         <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-          {sensor.location || 'Unknown Location'}
+          {sensor.location || "Unknown Location"}
         </Typography>
 
         {/* Current Value */}
         <Box sx={{ mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
             <Typography variant="h4" component="span">
               {currentValue.toFixed(2)}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              {sensor.unit || ''}
+              {sensor.unit || ""}
             </Typography>
             {getTrendIcon(currentValue, previousValue)}
           </Box>
-          
+
           <LinearProgress
             variant="determinate"
-            value={statistics ? ((currentValue - statistics.min) / (statistics.max - statistics.min)) * 100 : 50}
-            color={getSeverityColor(currentValue)}
+            value={
+              statistics
+                ? ((currentValue - statistics.min) /
+                    (statistics.max - statistics.min)) *
+                  100
+                : 50
+            }
+            color={getSeverityColor(currentValue) as any}
             sx={{ height: 8, borderRadius: 4 }}
           />
         </Box>
@@ -112,11 +124,18 @@ const SensorCard: React.FC<SensorCardProps> = ({ sensor, readings, statistics })
         )}
 
         {/* Status */}
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box
+          sx={{
+            mt: 2,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Chip
-            label={sensor.isActive ? 'Active' : 'Inactive'}
+            label={sensor.isActive ? "Active" : "Inactive"}
             size="small"
-            color={sensor.isActive ? 'success' : 'default'}
+            color={sensor.isActive ? "success" : "default"}
             variant="outlined"
           />
           <Typography variant="caption" color="textSecondary">
@@ -129,4 +148,3 @@ const SensorCard: React.FC<SensorCardProps> = ({ sensor, readings, statistics })
 };
 
 export default SensorCard;
-

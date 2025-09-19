@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RealTimeSensorTrack.Data;
 using RealTimeSensorTrack.Models;
+using RealTimeSensorTrack.Services;
 
 namespace RealTimeSensorTrack.Controllers
 {
@@ -11,11 +12,13 @@ namespace RealTimeSensorTrack.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<AlertsController> _logger;
+        private readonly IAlertService _alertService;
 
-        public AlertsController(ApplicationDbContext context, ILogger<AlertsController> logger)
+        public AlertsController(ApplicationDbContext context, ILogger<AlertsController> logger, IAlertService alertService)
         {
             _context = context;
             _logger = logger;
+            _alertService = alertService;
         }
 
         [HttpGet]
@@ -66,19 +69,28 @@ namespace RealTimeSensorTrack.Controllers
         [HttpPut("{id}/resolve")]
         public async Task<IActionResult> ResolveAlert(long id)
         {
-            var alert = await _context.Alerts.FindAsync(id);
-            if (alert == null)
-            {
-                return NotFound();
-            }
-
-            alert.IsResolved = true;
-            alert.ResolvedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
+            await _alertService.ResolveAlertAsync(id);
             return NoContent();
         }
+
+        [HttpPost]
+        public async Task<ActionResult<Alert>> CreateAlert([FromBody] CreateAlertRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            await _alertService.CreateAlertAsync(
+                request.SensorId,
+                request.Message,
+                request.Severity,
+                request.ThresholdValue,
+                request.ActualValue);
+
+            return Ok();
+        }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAlert(long id)
@@ -120,5 +132,14 @@ namespace RealTimeSensorTrack.Controllers
                 BySeverity = severityCounts
             });
         }
+    }
+
+    public class CreateAlertRequest
+    {
+        public int SensorId { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string Severity { get; set; } = "Info";
+        public double? ThresholdValue { get; set; }
+        public double? ActualValue { get; set; }
     }
 }

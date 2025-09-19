@@ -1,12 +1,12 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE_URL = 'http://localhost:5025/api';
+const API_BASE_URL = "http://localhost:5025/api";
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 50000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -17,7 +17,7 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('API Request Error:', error);
+    console.error("API Request Error:", error);
     return Promise.reject(error);
   }
 );
@@ -29,7 +29,7 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('API Response Error:', error.response?.data || error.message);
+    console.error("API Response Error:", error.response?.data || error.message);
     return Promise.reject(error);
   }
 );
@@ -59,7 +59,7 @@ export interface Alert {
   id: number;
   sensorId: number;
   message: string;
-  severity: 'Info' | 'Warning' | 'Error' | 'Critical';
+  severity: "Info" | "Warning" | "Error" | "Critical";
   thresholdValue?: number;
   actualValue?: number;
   createdAt: string;
@@ -96,7 +96,7 @@ export interface AlertStatistics {
 export class ApiService {
   // Sensors
   static async getSensors(): Promise<Sensor[]> {
-    const response = await apiClient.get('/sensors');
+    const response = await apiClient.get("/sensors");
     return response.data;
   }
 
@@ -105,12 +105,17 @@ export class ApiService {
     return response.data;
   }
 
-  static async createSensor(sensor: Omit<Sensor, 'id' | 'createdAt'>): Promise<Sensor> {
-    const response = await apiClient.post('/sensors', sensor);
+  static async createSensor(
+    sensor: Omit<Sensor, "id" | "createdAt">
+  ): Promise<Sensor> {
+    const response = await apiClient.post("/sensors", sensor);
     return response.data;
   }
 
-  static async updateSensor(id: number, sensor: Partial<Sensor>): Promise<void> {
+  static async updateSensor(
+    id: number,
+    sensor: Partial<Sensor>
+  ): Promise<void> {
     await apiClient.put(`/sensors/${id}`, sensor);
   }
 
@@ -119,33 +124,49 @@ export class ApiService {
   }
 
   // Sensor Readings
-  static async getSensorReadings(count: number = 1000): Promise<SensorReading[]> {
+  static async getSensorReadings(
+    count: number = 1000
+  ): Promise<SensorReading[]> {
     const response = await apiClient.get(`/sensorreadings?count=${count}`);
     return response.data;
   }
 
-  static async getReadingsBySensor(sensorId: number, count: number = 100): Promise<SensorReading[]> {
-    const response = await apiClient.get(`/sensorreadings/by-sensor/${sensorId}?count=${count}`);
+  static async getReadingsBySensor(
+    sensorId: number,
+    count: number = 100
+  ): Promise<SensorReading[]> {
+    const response = await apiClient.get(
+      `/sensorreadings/by-sensor/${sensorId}?count=${count}`
+    );
     return response.data;
   }
 
-  static async getReadingsByTimeRange(startTime: string, endTime: string): Promise<SensorReading[]> {
-    const response = await apiClient.get(`/sensorreadings/by-time-range?startTime=${startTime}&endTime=${endTime}`);
+  static async getReadingsByTimeRange(
+    startTime: string,
+    endTime: string
+  ): Promise<SensorReading[]> {
+    const response = await apiClient.get(
+      `/sensorreadings/by-time-range?startTime=${startTime}&endTime=${endTime}`
+    );
     return response.data;
   }
 
   static async getReadingCount(): Promise<{ count: number }> {
-    const response = await apiClient.get('/sensorreadings/count');
+    const response = await apiClient.get("/sensorreadings/count");
     return response.data;
   }
 
-  static async createSensorReading(reading: Omit<SensorReading, 'id' | 'timestamp'>): Promise<SensorReading> {
-    const response = await apiClient.post('/sensorreadings', reading);
+  static async createSensorReading(
+    reading: Omit<SensorReading, "id" | "timestamp">
+  ): Promise<SensorReading> {
+    const response = await apiClient.post("/sensorreadings", reading);
     return response.data;
   }
 
   // Sensor Statistics
-  static async getSensorStatistics(sensorId: number): Promise<SensorStatistics> {
+  static async getSensorStatistics(
+    sensorId: number
+  ): Promise<SensorStatistics> {
     const response = await apiClient.get(`/sensors/${sensorId}/statistics`);
     return response.data;
   }
@@ -161,9 +182,10 @@ export class ApiService {
       page: page.toString(),
       pageSize: pageSize.toString(),
     });
-    
-    if (severity) params.append('severity', severity);
-    if (isResolved !== undefined) params.append('isResolved', isResolved.toString());
+
+    if (severity) params.append("severity", severity);
+    if (isResolved !== undefined)
+      params.append("isResolved", isResolved.toString());
 
     const response = await apiClient.get(`/alerts?${params.toString()}`);
     return response.data;
@@ -183,10 +205,19 @@ export class ApiService {
   }
 
   static async getAlertStatistics(): Promise<AlertStatistics> {
-    const response = await apiClient.get('/alerts/statistics');
+    const response = await apiClient.get("/alerts/statistics");
     return response.data;
+  }
+
+  static async createAlert(alert: {
+    sensorId: number;
+    message: string;
+    severity: string;
+    thresholdValue?: number;
+    actualValue?: number;
+  }): Promise<void> {
+    await apiClient.post("/alerts", alert);
   }
 }
 
 export default ApiService;
-
