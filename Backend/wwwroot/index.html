@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Sensor Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-item {
+            text-align: center;
+            color: white;
+        }
+
+        .status-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: block;
+        }
+
+        .status-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .sensors-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .sensor-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+
+        .sensor-info h4 {
+            margin: 0;
+            color: #333;
+        }
+
+        .sensor-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .alerts-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 20px;
+        }
+
+        .alert-item {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+
+        .alert-critical { border-left-color: #dc3545; background: #f8d7da; }
+        .alert-error { border-left-color: #fd7e14; background: #fff3cd; }
+        .alert-warning { border-left-color: #ffc107; background: #fff3cd; }
+        .alert-info { border-left-color: #17a2b8; background: #d1ecf1; }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+        }
+
+        .connected { background: #28a745; }
+        .disconnected { background: #dc3545; }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-bar {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">Connecting...</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🌡️ Real-Time Sensor Dashboard</h1>
+            <p>Live monitoring of sensor data with anomaly detection</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-value" id="totalReadings">0</span>
+                <span class="status-label">Total Readings</span>
+            </div>
+            <div class="status-item">
+                <span class="status-value" id="activeSensors">0</span>
+                <span class="status-label">Active Sensors</span>
+            </div>
+            <div class="status-item">
+                <span class="status-value" id="alertsCount">0</span>
+                <span class="status-label">Active Alerts</span>
+            </div>
+            <div class="status-item">
+                <span class="status-value" id="dataRate">0</span>
+                <span class="status-label">Readings/sec</span>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="chart-container">
+                <div class="chart-title">📊 Live Sensor Data</div>
+                <canvas id="sensorChart" width="400" height="200"></canvas>
+            </div>
+
+            <div class="sensors-panel">
+                <div class="chart-title">🔧 Active Sensors</div>
+                <div id="sensorsList">
+                    <div class="loading">Loading sensors...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alerts-panel">
+            <div class="chart-title">⚠️ Recent Alerts</div>
+            <div id="alertsList">
+                <div class="loading">Loading alerts...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // SignalR connection
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/sensorHub")
+            .build();
+
+        // Chart.js setup
+        const ctx = document.getElementById('sensorChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: []
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    },
+                    x: {
+                        type: 'time',
+                        time: {
+                            displayFormats: {
+                                second: 'HH:mm:ss'
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+
+        // State management
+        let sensors = new Map();
+        let readingsCount = 0;
+        let lastUpdateTime = Date.now();
+        let dataRate = 0;
+
+        // Connection events
+        connection.start().then(() => {
+            updateConnectionStatus(true);
+            loadInitialData();
+        }).catch(err => {
+            console.error('SignalR connection error:', err);
+            updateConnectionStatus(false);
+        });
+
+        connection.onclose(() => {
+            updateConnectionStatus(false);
+        });
+
+        // SignalR event handlers
+        connection.on("NewReadings", (readings) => {
+            readings.forEach(reading => {
+                addReadingToChart(reading);
+                updateSensorValue(reading);
+            });
+            
+            readingsCount += readings.length;
+            updateDataRate();
+            updateStatusBar();
+        });
+
+        connection.on("NewAlert", (alert) => {
+            addAlertToList(alert);
+            updateStatusBar();
+        });
+
+        // Chart management
+        function addReadingToChart(reading) {
+            const sensorId = reading.sensorId;
+            const sensor = sensors.get(sensorId);
+            
+            if (!sensor) return;
+
+            const dataset = chart.data.datasets.find(ds => ds.label === sensor.name);
+            if (dataset) {
+                const time = new Date(reading.timestamp);
+                dataset.data.push({ x: time, y: reading.value });
+                
+                // Keep only last 50 points
+                if (dataset.data.length > 50) {
+                    dataset.data.shift();
+                }
+            }
+
+            chart.update('none');
+        }
+
+        function updateSensorValue(reading) {
+            const sensor = sensors.get(reading.sensorId);
+            if (sensor) {
+                sensor.lastValue = reading.value;
+                sensor.lastUpdate = reading.timestamp;
+                updateSensorDisplay(sensor);
+            }
+        }
+
+        // UI updates
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = connected ? '🟢 Connected' : '🔴 Disconnected';
+            statusEl.className = `connection-status ${connected ? 'connected' : 'disconnected'}`;
+        }
+
+        function updateDataRate() {
+            const now = Date.now();
+            const timeDiff = (now - lastUpdateTime) / 1000;
+            dataRate = Math.round(readingsCount / timeDiff);
+            lastUpdateTime = now;
+        }
+
+        function updateStatusBar() {
+            document.getElementById('totalReadings').textContent = readingsCount.toLocaleString();
+            document.getElementById('activeSensors').textContent = sensors.size;
+            document.getElementById('dataRate').textContent = dataRate;
+        }
+
+        function updateSensorDisplay(sensor) {
+            const sensorEl = document.getElementById(`sensor-${sensor.id}`);
+            if (sensorEl) {
+                const valueEl = sensorEl.querySelector('.sensor-value');
+                valueEl.textContent = `${sensor.lastValue.toFixed(2)} ${sensor.unit || ''}`;
+            }
+        }
+
+        function addAlertToList(alert) {
+            const alertsList = document.getElementById('alertsList');
+            const alertEl = document.createElement('div');
+            alertEl.className = `alert-item alert-${alert.severity.toLowerCase()}`;
+            alertEl.innerHTML = `
+                <strong>${alert.severity}</strong> - ${alert.message}
+                <br><small>${new Date(alert.createdAt).toLocaleString()}</small>
+            `;
+            alertsList.insertBefore(alertEl, alertsList.firstChild);
+            
+            // Keep only last 10 alerts
+            while (alertsList.children.length > 10) {
+                alertsList.removeChild(alertsList.lastChild);
+            }
+        }
+
+        // Data loading
+        async function loadInitialData() {
+            try {
+                // Load sensors
+                const sensorsResponse = await fetch('/api/sensors');
+                const sensorsData = await sensorsResponse.json();
+                
+                sensorsData.forEach(sensor => {
+                    sensors.set(sensor.id, {
+                        ...sensor,
+                        lastValue: 0,
+                        lastUpdate: null
+                    });
+                });
+
+                // Setup chart datasets
+                const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+                chart.data.datasets = sensorsData.map((sensor, index) => ({
+                    label: sensor.name,
+                    data: [],
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + '20',
+                    tension: 0.1
+                }));
+
+                updateSensorsList();
+                updateStatusBar();
+
+                // Load recent readings
+                const readingsResponse = await fetch('/api/sensorreadings?count=100');
+                const readingsData = await readingsResponse.json();
+                
+                readingsData.forEach(reading => {
+                    addReadingToChart(reading);
+                    updateSensorValue(reading);
+                });
+
+                // Load alerts
+                loadAlerts();
+
+            } catch (error) {
+                console.error('Error loading initial data:', error);
+            }
+        }
+
+        function updateSensorsList() {
+            const sensorsList = document.getElementById('sensorsList');
+            sensorsList.innerHTML = '';
+            
+            sensors.forEach(sensor => {
+                const sensorEl = document.createElement('div');
+                sensorEl.className = 'sensor-item';
+                sensorEl.id = `sensor-${sensor.id}`;
+                sensorEl.innerHTML = `
+                    <div class="sensor-info">
+                        <h4>${sensor.name}</h4>
+                        <small>${sensor.type} - ${sensor.location || 'Unknown'}</small>
+                    </div>
+                    <div class="sensor-value">-- ${sensor.unit || ''}</div>
+                `;
+                sensorsList.appendChild(sensorEl);
+            });
+        }
+
+        async function loadAlerts() {
+            try {
+                const response = await fetch('/api/alerts?pageSize=10');
+                const alerts = await response.json();
+                
+                const alertsList = document.getElementById('alertsList');
+                alertsList.innerHTML = '';
+                
+                alerts.forEach(alert => {
+                    addAlertToList(alert);
+                });
+
+                document.getElementById('alertsCount').textContent = alerts.length;
+            } catch (error) {
+                console.error('Error loading alerts:', error);
+            }
+        }
+
+        // Auto-refresh data every 30 seconds
+        setInterval(loadAlerts, 30000);
+    </script>
+</body>
+</html>
