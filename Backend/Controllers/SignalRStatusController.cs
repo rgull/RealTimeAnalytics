@@ -1,7 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using RealTimeSensorTrack.Hubs;
 using RealTimeSensorTrack.Services;
+using System.Threading;
 
 namespace RealTimeSensorTrack.Controllers
 {
@@ -11,6 +12,10 @@ namespace RealTimeSensorTrack.Controllers
     {
         private readonly IHubContext<SensorHub> _hubContext;
         private readonly ISensorSimulationService _simulationService;
+
+
+        // SemaphoreSlim with max concurrency of 1
+        private static readonly SemaphoreSlim _semaphore = new(1, 1);
 
         public SignalRStatusController(
             IHubContext<SensorHub> hubContext,
@@ -79,6 +84,31 @@ namespace RealTimeSensorTrack.Controllers
                     Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                 });
             }
+        }
+
+        [HttpPost("start-AutoSensor")]
+        public async Task<IActionResult> StartAutoSensorReadingGeneratorAsync([FromQuery] int recordMultiplier = 1)
+        {
+            try
+            {
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                // Wait until current simulation finishes (waits indefinitely — can add timeout if needed)
+                //wait _semaphore.WaitAsync();
+                await _simulationService.GenerateAndSendReadingsContinuouslyAsync(CancellationToken.None, recordMultiplier);
+
+                stopwatch.Stop();
+                var executionTime = stopwatch.Elapsed;
+
+                return Ok($"✅ Simulation completed in {executionTime.TotalSeconds:F2} seconds.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal error during simulation.");
+            }
+            //finally
+            //{
+            //    _semaphore.Release();
+            //}
         }
     }
 }

@@ -9,6 +9,7 @@ namespace RealTimeSensorTrack.Services
     {
         Task StartSimulationAsync();
         Task StopSimulationAsync();
+        Task GenerateAndSendReadingsContinuouslyAsync(CancellationToken stoppingToken, int recordMultiplier = 1);
         bool IsRunning { get; }
     }
 
@@ -60,7 +61,7 @@ namespace RealTimeSensorTrack.Services
         /// <summary>
         /// Auto sensor reading generator that continuously creates and sends readings via SignalR
         /// </summary>
-        private async Task StartAutoSensorReadingGeneratorAsync(CancellationToken stoppingToken)
+        public async Task StartAutoSensorReadingGeneratorAsync(CancellationToken stoppingToken,int recordMultiplier = 1)
         {
             _logger.LogInformation("Starting auto sensor reading generator...");
             
@@ -70,7 +71,7 @@ namespace RealTimeSensorTrack.Services
                 {
                     if (_isRunning && _sensors.Any())
                     {
-                        await GenerateAndSendReadingsContinuouslyAsync(stoppingToken);
+                        await GenerateAndSendReadingsContinuouslyAsync(stoppingToken, recordMultiplier);
                     }
                     
                     await Task.Delay(_updateIntervalMs, stoppingToken);
@@ -90,37 +91,36 @@ namespace RealTimeSensorTrack.Services
         /// <summary>
         /// Continuously generates sensor readings and sends them via SignalR
         /// </summary>
-        private async Task GenerateAndSendReadingsContinuouslyAsync(CancellationToken stoppingToken)
+        public async Task GenerateAndSendReadingsContinuouslyAsync(CancellationToken stoppingToken, int recordMultiplier = 1)
         {
             using var scope = _serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var inMemoryService = scope.ServiceProvider.GetRequiredService<IInMemoryDataService>();
             var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<SensorHub>>();
-            var alertService = scope.ServiceProvider.GetRequiredService<IAlertService>();
 
             var readings = new List<SensorReading>();
-            var readingsToGenerate = Math.Min(_batchSize, _simulationRate);
+            if (_sensors == null || !_sensors.Any())
+            {
+                await InitializeSensorsAsync(); // Ensure sensors are loaded
+            }
 
-            // Generate readings for this batch
+            // NEW: Adjusted number of readings to generate using recordMultiplier
+            var readingsToGenerate = Math.Min(_batchSize * recordMultiplier, _simulationRate);
+
             for (int i = 0; i < readingsToGenerate && !stoppingToken.IsCancellationRequested; i++)
             {
                 var sensor = _sensors[_random.Next(_sensors.Count)];
                 var reading = GenerateSensorReading(sensor);
-                
+
                 readings.Add(reading);
                 inMemoryService.AddReading(reading);
 
-                // Check for alerts after generating each reading
-                await alertService.CheckSensorReadingForAlertsAsync(reading);
-
-                // Small delay to spread readings across the interval
                 if (i < readingsToGenerate - 1)
                 {
                     await Task.Delay(_updateIntervalMs / readingsToGenerate, stoppingToken);
                 }
             }
 
-            // Save to database and send via SignalR
             if (readings.Any())
             {
                 await SaveReadingsToDatabaseAsync(context, readings, stoppingToken);

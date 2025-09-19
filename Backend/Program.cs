@@ -29,6 +29,8 @@ namespace RealTimeSensorTrack
             builder.Services.AddScoped<IAnomalyDetectionService, AnomalyDetectionService>();
             builder.Services.AddScoped<IDataPurgeService, DataPurgeService>();
             builder.Services.AddScoped<IAlertService, AlertService>();
+            builder.Services.AddScoped<ISensorSimulationService, SensorSimulationService>();
+            
 
             // Add background services
             builder.Services.AddHostedService<SensorSimulationService>();
