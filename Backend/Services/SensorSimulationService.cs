@@ -105,7 +105,7 @@ namespace RealTimeSensorTrack.Services
             }
 
             // NEW: Adjusted number of readings to generate using recordMultiplier
-            var readingsToGenerate = Math.Min(_batchSize * recordMultiplier, _simulationRate);
+            var readingsToGenerate = _batchSize * recordMultiplier;
 
             for (int i = 0; i < readingsToGenerate && !stoppingToken.IsCancellationRequested; i++)
             {

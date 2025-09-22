@@ -92,23 +92,19 @@ namespace RealTimeSensorTrack.Controllers
             try
             {
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                // Wait until current simulation finishes (waits indefinitely — can add timeout if needed)
-                //wait _semaphore.WaitAsync();
+               
                 await _simulationService.GenerateAndSendReadingsContinuouslyAsync(CancellationToken.None, recordMultiplier);
 
                 stopwatch.Stop();
                 var executionTime = stopwatch.Elapsed;
 
-                return Ok($"✅ Simulation completed in {executionTime.TotalSeconds:F2} seconds.");
+                return Ok($"✅ Inserted {recordMultiplier} records per sensor. Simulation completed in {executionTime.TotalSeconds:F2} seconds.");
+
             }
             catch (Exception ex)
             {
                 return StatusCode(500, "Internal error during simulation.");
             }
-            //finally
-            //{
-            //    _semaphore.Release();
-            //}
         }
     }
 }

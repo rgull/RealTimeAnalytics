@@ -25,26 +25,66 @@ namespace RealTimeSensorTrack.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<SensorReading>> GetSensorReadings(int count = 1000)
+        public ActionResult<PaginatedResponse<SensorReading>> GetSensorReadings([FromQuery] PaginationRequest request)
         {
-            var readings = _inMemoryService.GetAllRecentReadings(count);
-            return Ok(readings);
+            var allReadings = _inMemoryService.GetAllRecentReadings(10000); // Get more data for pagination
+            var totalCount = allReadings.Count();
+            
+            var paginatedReadings = allReadings
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToList();
+
+            var response = new PaginatedResponse<SensorReading>(
+                paginatedReadings, 
+                request.Page, 
+                request.PageSize, 
+                totalCount);
+
+            return Ok(response);
         }
 
         [HttpGet("by-sensor/{sensorId}")]
-        public ActionResult<IEnumerable<SensorReading>> GetReadingsBySensor(int sensorId, int count = 100)
+        public ActionResult<PaginatedResponse<SensorReading>> GetReadingsBySensor(int sensorId, [FromQuery] PaginationRequest request)
         {
-            var readings = _inMemoryService.GetRecentReadings(sensorId, count);
-            return Ok(readings);
+            var allReadings = _inMemoryService.GetRecentReadings(sensorId, 10000); // Get more data for pagination
+            var totalCount = allReadings.Count();
+            
+            var paginatedReadings = allReadings
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToList();
+
+            var response = new PaginatedResponse<SensorReading>(
+                paginatedReadings, 
+                request.Page, 
+                request.PageSize, 
+                totalCount);
+
+            return Ok(response);
         }
 
         [HttpGet("by-time-range")]
-        public ActionResult<IEnumerable<SensorReading>> GetReadingsByTimeRange(
+        public ActionResult<PaginatedResponse<SensorReading>> GetReadingsByTimeRange(
             DateTime startTime, 
-            DateTime endTime)
+            DateTime endTime,
+            [FromQuery] PaginationRequest request)
         {
-            var readings = _inMemoryService.GetReadingsByTimeRange(startTime, endTime);
-            return Ok(readings);
+            var allReadings = _inMemoryService.GetReadingsByTimeRange(startTime, endTime);
+            var totalCount = allReadings.Count();
+            
+            var paginatedReadings = allReadings
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToList();
+
+            var response = new PaginatedResponse<SensorReading>(
+                paginatedReadings, 
+                request.Page, 
+                request.PageSize, 
+                totalCount);
+
+            return Ok(response);
         }
 
         [HttpGet("count")]
