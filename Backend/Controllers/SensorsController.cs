@@ -25,12 +25,31 @@ namespace RealTimeSensorTrack.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Sensor>>> GetSensors()
+        public async Task<ActionResult<PaginatedResponse<Sensor>>> GetSensors([FromQuery] PaginationRequest request)
         {
-            return await _context.Sensors//.Include(x=>x.SensorReadings).Include(x => x.SensorStatistics)
+            var query = _context.Sensors
+                .Include(x => x.SensorReadings)
+                .Include(x => x.SensorStatistics)
                 .Where(s => s.IsActive)
+                .AsQueryable();
+
+            // Get total count
+            var totalCount = await query.CountAsync();
+
+            // Apply pagination
+            var sensors = await query
                 .OrderBy(s => s.Name)
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
                 .ToListAsync();
+
+            var response = new PaginatedResponse<Sensor>(
+                sensors, 
+                request.Page, 
+                request.PageSize, 
+                totalCount);
+
+            return Ok(response);
         }
 
         [HttpGet("{id}")]
@@ -94,17 +113,31 @@ namespace RealTimeSensorTrack.Controllers
                 return NotFound();
             }
 
-            sensor.IsActive = false;
+            // sensor.IsActive = false;
+             _context.Sensors.Remove(sensor);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
         [HttpGet("{id}/readings")]
-        public ActionResult<IEnumerable<SensorReading>> GetSensorReadings(int id, int count = 100)
+        public ActionResult<PaginatedResponse<SensorReading>> GetSensorReadings(int id, [FromQuery] PaginationRequest request)
         {
-            var readings = _inMemoryService.GetRecentReadings(id, count);
-            return Ok(readings);
+            var allReadings = _inMemoryService.GetRecentReadings(id, 10000); // Get more data for pagination
+            var totalCount = allReadings.Count();
+            
+            var paginatedReadings = allReadings
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToList();
+
+            var response = new PaginatedResponse<SensorReading>(
+                paginatedReadings, 
+                request.Page, 
+                request.PageSize, 
+                totalCount);
+
+            return Ok(response);
         }
 
         [HttpGet("{id}/statistics")]

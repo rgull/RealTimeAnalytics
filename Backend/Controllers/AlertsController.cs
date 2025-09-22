@@ -22,33 +22,55 @@ namespace RealTimeSensorTrack.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Alert>>> GetAlerts(
-            int page = 1, 
-            int pageSize = 50,
-            string? severity = null,
-            bool? isResolved = null)
+        public async Task<ActionResult<PaginatedResponse<Alert>>> GetAlerts([FromQuery] AlertsFilter filter)
         {
             var query = _context.Alerts
                 .Include(a => a.Sensor)
                 .AsQueryable();
 
-            if (!string.IsNullOrEmpty(severity))
+            // Apply filters
+            if (filter.SensorId.HasValue)
             {
-                query = query.Where(a => a.Severity == severity);
+                query = query.Where(a => a.SensorId == filter.SensorId.Value);
             }
 
-            if (isResolved.HasValue)
+            if (!string.IsNullOrEmpty(filter.Severity))
             {
-                query = query.Where(a => a.IsResolved == isResolved.Value);
+                query = query.Where(a => a.Severity == filter.Severity);
             }
 
+            if (filter.IsResolved.HasValue)
+            {
+                query = query.Where(a => a.IsResolved == filter.IsResolved.Value);
+            }
+
+            if (filter.StartDate.HasValue)
+            {
+                query = query.Where(a => a.CreatedAt >= filter.StartDate.Value);
+            }
+
+            if (filter.EndDate.HasValue)
+            {
+                query = query.Where(a => a.CreatedAt <= filter.EndDate.Value);
+            }
+
+            // Get total count
+            var totalCount = await query.CountAsync();
+
+            // Apply pagination
             var alerts = await query
                 .OrderByDescending(a => a.CreatedAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
+                .Skip((filter.Page - 1) * filter.PageSize)
+                .Take(filter.PageSize)
                 .ToListAsync();
 
-            return Ok(alerts);
+            var response = new PaginatedResponse<Alert>(
+                alerts, 
+                filter.Page, 
+                filter.PageSize, 
+                totalCount);
+
+            return Ok(response);
         }
 
         [HttpGet("{id}")]
